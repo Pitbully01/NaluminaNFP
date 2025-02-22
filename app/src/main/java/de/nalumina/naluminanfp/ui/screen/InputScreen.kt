@@ -2,6 +2,7 @@ package de.nalumina.naluminanfp.ui.screen
 
 import android.app.TimePickerDialog
 import android.content.Context
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -43,36 +44,26 @@ fun InputScreen(navController: NavController) {
     var tempTime by remember { mutableStateOf(getCurrentTime()) }
     var bleeding by remember { mutableStateOf("Keine") }
 
-    // Schmerzen mit Intensität
-    var headache by remember { mutableStateOf(false) }
-    var headacheIntensity by remember { mutableStateOf(1) }
-
-    var breastPain by remember { mutableStateOf(false) }
-    var breastPainIntensity by remember { mutableStateOf(1) }
-
-    var nausea by remember { mutableStateOf(false) }
-    var nauseaIntensity by remember { mutableStateOf(1) }
-
     // Zervixschleim
     var mucusAmount by remember { mutableStateOf("Trocken") }
     var mucusConsistency by remember { mutableStateOf("Klebrig") }
     var mucusTime by remember { mutableStateOf(getCurrentTime()) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Neue NFP-Daten") })
-        }
-    ) { innerPadding ->
+    var notes by remember { mutableStateOf("") }
+
+
+    Scaffold(topBar = {
+        TopAppBar(title = { Text("Neue NFP-Daten") })
+    }) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(scrollState)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // NFP-Datum
-            DatePickerField(context, "NFP-Datum", nfpdate) { selectedDate ->
+            DatePickerField(context, "Messdatum", nfpdate) { selectedDate ->
                 nfpdate = selectedDate
             }
 
@@ -86,16 +77,14 @@ fun InputScreen(navController: NavController) {
             }
 
             if (isTemperatureEnabled) {
-                TemperaturePicker(
-                    tens = tens,
+                TemperaturePicker(tens = tens,
                     ones = ones,
                     decimalTens = decimalTens,
                     decimalOnes = decimalOnes,
                     onTensChange = { tens = it },
                     onOnesChange = { ones = it },
                     onDecimalTensChange = { decimalTens = it },
-                    onDecimalOnesChange = { decimalOnes = it }
-                )
+                    onDecimalOnesChange = { decimalOnes = it })
 
                 Text("Ausgewählte Temperatur: $tens$ones,$decimalTens$decimalOnes°C")
 
@@ -103,35 +92,6 @@ fun InputScreen(navController: NavController) {
                 TimePickerField(context, "Zeit der Temperaturmessung", tempTime) { newTime ->
                     tempTime = newTime
                 }
-            }
-
-            // Blutung
-            Text("Blutung:")
-            DropdownMenuField(listOf("Keine", "Leicht", "Mittel", "Stark"), bleeding) {
-                bleeding = it
-            }
-
-            // Schmerzen mit Intensität
-            Text("Körperliche Beschwerden:")
-            PainIntensityCheckbox(
-                "Kopfschmerzen",
-                headache,
-                headacheIntensity
-            ) { checked, intensity ->
-                headache = checked
-                headacheIntensity = intensity
-            }
-            PainIntensityCheckbox(
-                "Brustspannen",
-                breastPain,
-                breastPainIntensity
-            ) { checked, intensity ->
-                breastPain = checked
-                breastPainIntensity = intensity
-            }
-            PainIntensityCheckbox("Übelkeit", nausea, nauseaIntensity) { checked, intensity ->
-                nausea = checked
-                nauseaIntensity = intensity
             }
 
             // Zervixschleim
@@ -149,8 +109,7 @@ fun InputScreen(navController: NavController) {
                 if (mucusAmount != "Trocken") {
                     Text("Zervixschleim - Konsistenz:")
                     DropdownMenuField(
-                        listOf("Klebrig", "Cremig", "Wässrig", "Spinnbar"),
-                        mucusConsistency
+                        listOf("Klebrig", "Cremig", "Wässrig", "Spinnbar"), mucusConsistency
                     ) {
                         mucusConsistency = it
                     }
@@ -161,10 +120,35 @@ fun InputScreen(navController: NavController) {
                     mucusTime = newTime
                 }
             }
+
             // Geschlechtsverkehr
             GvSelection(selectedOption = gvOption) { selected ->
                 gvOption = selected
             }
+
+            // Blutung
+            Text("Blutung:")
+            DropdownMenuField(listOf("Keine", "Leicht", "Mittel", "Stark"), bleeding) {
+                bleeding = it
+            }
+
+            // Schmerzen mit Intensität
+            Text("Beschwerden:")
+            ComplaintsSection()
+
+            // Notizen
+            OutlinedTextField(value = notes,
+                onValueChange = { notes = it },
+                label = { Text("Notizen") },
+                placeholder = { Text("Gib hier deine Notizen ein...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp), // Mehrzeiliges Feld
+                singleLine = false,
+                maxLines = 5
+            )
+
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -176,24 +160,120 @@ fun InputScreen(navController: NavController) {
 }
 
 @Composable
+fun ComplaintsSection() {
+    val allComplaints = listOf(
+        "Kopfschmerzen",
+        "Brustspannen",
+        "Übelkeit",
+        "Rückenschmerzen",
+        "Bauchschmerzen",
+        "Müdigkeit",
+        "Reizbarkeit"
+    )
+    val selectedComplaints = remember { mutableStateListOf<Pair<String, Int>>() }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+        // Dropdown zum Hinzufügen neuer Beschwerden
+        ComplaintDropdown(allComplaints, selectedComplaints)
+
+        // Anzeige der ausgewählten Beschwerden mit Slider
+        selectedComplaints.forEachIndexed { index, (complaint, intensity) ->
+            ComplaintIntensitySlider(complaint = complaint,
+                intensity = intensity,
+                onIntensityChange = { newIntensity ->
+                    selectedComplaints[index] = complaint to newIntensity
+                },
+                onRemove = {
+                    selectedComplaints.removeAt(index)
+                })
+        }
+    }
+}
+
+@Composable
+fun ComplaintDropdown(
+    allComplaints: List<String>, selectedComplaints: MutableList<Pair<String, Int>>
+) {
+    val availableComplaints = allComplaints.filter { complaint ->
+        selectedComplaints.none { it.first == complaint }
+    }
+
+    var expanded by remember { mutableStateOf(false) }
+    var selectedComplaint by remember { mutableStateOf<String?>(null) }
+
+    if (availableComplaints.isNotEmpty()) {
+        OutlinedButton(onClick = { expanded = true }) {
+            Text(text = "Hinzufügen")
+        }
+
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            availableComplaints.forEach { complaint ->
+                DropdownMenuItem(text = { Text(complaint) }, onClick = {
+                    selectedComplaint = complaint
+                    selectedComplaints.add(0, complaint to 5) // Standardintensität 5
+                    expanded = false
+                })
+            }
+        }
+    } else {
+        Text("Alle Beschwerden wurden hinzugefügt.", style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+fun ComplaintIntensitySlider(
+    complaint: String, intensity: Int, onIntensityChange: (Int) -> Unit, onRemove: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.1f))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(text = complaint, style = MaterialTheme.typography.bodyLarge)
+            TextButton(onClick = onRemove) {
+                Text("Entfernen", color = MaterialTheme.colorScheme.error)
+            }
+        }
+
+        Slider(
+            value = intensity.toFloat(),
+            onValueChange = { onIntensityChange(it.toInt()) },
+            valueRange = 1f..10f,
+            steps = 8,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Text("Intensität: $intensity/10", modifier = Modifier.align(Alignment.CenterHorizontally))
+    }
+}
+
+// TODO: alle buttons den gleichen margin nach links haben lassen damit das design einheitlich ist
+@Composable
 fun GvSelection(selectedOption: String, onOptionSelected: (String) -> Unit) {
     val options = listOf(
-        "None" to "🚫",
-        "Protected" to "🛡️",
-        "Unprotected" to "❤️"
+        "None" to "🚫", "Protected" to "🛡️", "Unprotected" to "❤️"
     )
 
     Column {
         Text("Geschlechtsverkehr:", style = MaterialTheme.typography.bodyLarge)
+        Spacer(modifier = Modifier.height(8.dp))
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             options.forEach { (label, emoji) ->
                 OutlinedButton(
                     onClick = { onOptionSelected(label) },
                     colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = if (selectedOption == label) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+                        containerColor = if (selectedOption == label) MaterialTheme.colorScheme.primary.copy(
+                            alpha = 0.2f
+                        ) else MaterialTheme.colorScheme.surface
                     ),
                     modifier = Modifier
                         .wrapContentWidth()
@@ -213,7 +293,6 @@ fun GvSelection(selectedOption: String, onOptionSelected: (String) -> Unit) {
 }
 
 
-
 fun getCurrentDate(): String {
     val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
     return dateFormat.format(Date())
@@ -222,10 +301,7 @@ fun getCurrentDate(): String {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DatePickerField(
-    context: Context,
-    label: String,
-    date: String,
-    onDateSelected: (String) -> Unit
+    context: Context, label: String, date: String, onDateSelected: (String) -> Unit
 ) {
     val calendar = Calendar.getInstance()
 
@@ -233,7 +309,7 @@ fun DatePickerField(
         val datePickerDialog = android.app.DatePickerDialog(
             context,
             { _, year, month, dayOfMonth ->
-                val selectedDate = String.format("%02d.%02d.%d", dayOfMonth, month + 1, year)
+                val selectedDate = String.format(Locale.getDefault(), "%02d.%02d.%d", dayOfMonth, month + 1, year)
                 onDateSelected(selectedDate)
             },
             calendar.get(Calendar.YEAR),
@@ -247,11 +323,16 @@ fun DatePickerField(
 }
 
 
-@Composable
+@Composable // TODO: BUG: Jedes mal beim öffnen wird die jeweilige Zahl letzte ziffer um 1 erhöht
 fun TemperaturePicker(
-    tens: Int, ones: Int, decimalTens: Int, decimalOnes: Int,
-    onTensChange: (Int) -> Unit, onOnesChange: (Int) -> Unit,
-    onDecimalTensChange: (Int) -> Unit, onDecimalOnesChange: (Int) -> Unit
+    tens: Int,
+    ones: Int,
+    decimalTens: Int,
+    decimalOnes: Int,
+    onTensChange: (Int) -> Unit,
+    onOnesChange: (Int) -> Unit,
+    onDecimalTensChange: (Int) -> Unit,
+    onDecimalOnesChange: (Int) -> Unit
 ) {
     Row(
         horizontalArrangement = Arrangement.Center,
@@ -262,22 +343,18 @@ fun TemperaturePicker(
         NumberPicker(range = 0..9, selected = ones, onValueChange = onOnesChange)
 
         Text(
-            ",",
-            modifier = Modifier
+            ",", modifier = Modifier
                 .padding(bottom = 0.dp) // Komma tiefer setzen
-                .align(Alignment.CenterVertically),
-            style = MaterialTheme.typography.headlineMedium
+                .align(Alignment.CenterVertically), style = MaterialTheme.typography.headlineMedium
         )
 
         NumberPicker(range = 0..9, selected = decimalTens, onValueChange = onDecimalTensChange)
         NumberPicker(range = 0..9, selected = decimalOnes, onValueChange = onDecimalOnesChange)
 
         Text(
-            "°C",
-            modifier = Modifier
+            "°C", modifier = Modifier
                 .padding(top = 16.dp) // °C tiefer setzen
-                .align(Alignment.CenterVertically),
-            style = MaterialTheme.typography.headlineMedium
+                .align(Alignment.CenterVertically), style = MaterialTheme.typography.headlineMedium
         )
     }
 }
@@ -312,8 +389,7 @@ fun NumberPicker(range: IntRange, selected: Int, onValueChange: (Int) -> Unit) {
                     text = value.toString(),
                     style = MaterialTheme.typography.headlineMedium,
                     color = if (index == lazyListState.firstVisibleItemIndex + 1) MaterialTheme.colorScheme.primary else Color.Gray,
-                    modifier = Modifier
-                        .padding(8.dp)
+                    modifier = Modifier.padding(8.dp)
                 )
             }
         }
@@ -338,10 +414,7 @@ fun getCurrentTime(): String {
 // Hilfsfunktion für die Zeitauswahl
 @Composable
 fun TimePickerField(
-    context: Context,
-    label: String,
-    time: String,
-    onTimeSelected: (String) -> Unit
+    context: Context, label: String, time: String, onTimeSelected: (String) -> Unit
 ) {
     val calendar = Calendar.getInstance()
     val hour = calendar.get(Calendar.HOUR_OF_DAY)
@@ -349,11 +422,9 @@ fun TimePickerField(
 
     OutlinedButton(onClick = {
         TimePickerDialog(
-            context,
-            { _, selectedHour, selectedMinute ->
+            context, { _, selectedHour, selectedMinute ->
                 onTimeSelected(String.format("%02d:%02d", selectedHour, selectedMinute))
-            },
-            hour, minute, true
+            }, hour, minute, true
         ).show()
     }) {
         Text("$label: $time")
@@ -363,25 +434,17 @@ fun TimePickerField(
 // Schmerzen mit Intensität (Checkbox oben, Slider darunter)
 @Composable
 fun PainIntensityCheckbox(
-    text: String,
-    checked: Boolean,
-    intensity: Int,
-    onCheckedChange: (Boolean, Int) -> Unit
+    text: String, checked: Boolean, intensity: Int, onCheckedChange: (Boolean, Int) -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically
         ) {
-            Checkbox(
-                checked = checked,
-                onCheckedChange = {
-                    onCheckedChange(it, if (it) 5 else 1) // Standardwert 5, wenn aktiviert
-                }
-            )
+            Checkbox(checked = checked, onCheckedChange = {
+                onCheckedChange(it, if (it) 5 else 1) // Standardwert 5, wenn aktiviert
+            })
             Text(text)
         }
         if (checked) {
@@ -401,9 +464,7 @@ fun PainIntensityCheckbox(
 // Hilfsfunktion für Dropdown-Menüs
 @Composable
 fun DropdownMenuField(
-    options: List<String>,
-    selectedOption: String,
-    onOptionSelected: (String) -> Unit
+    options: List<String>, selectedOption: String, onOptionSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box {
