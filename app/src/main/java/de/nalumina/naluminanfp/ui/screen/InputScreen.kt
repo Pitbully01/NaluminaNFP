@@ -1,13 +1,9 @@
-package de.nalumina.naluminanfp
+package de.nalumina.naluminanfp.ui.screen
 
 import android.app.TimePickerDialog
 import android.content.Context
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -19,7 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import androidx.navigation.NavController
+import de.nalumina.naluminanfp.Screen
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -32,12 +30,15 @@ fun InputScreen(navController: NavController) {
     // Optionen für Temperatur & Zervixschleim
     var isTemperatureEnabled by remember { mutableStateOf(false) }
     var isMucusEnabled by remember { mutableStateOf(false) }
+    var gvOption by remember { mutableStateOf("Kein Verkehr") }
 
     // Temperaturwerte
     var tens by remember { mutableStateOf(3) }
     var ones by remember { mutableStateOf(6) }
     var decimalTens by remember { mutableStateOf(5) }
     var decimalOnes by remember { mutableStateOf(0) }
+
+    var nfpdate by remember { mutableStateOf(getCurrentDate()) }
 
     var tempTime by remember { mutableStateOf(getCurrentTime()) }
     var bleeding by remember { mutableStateOf("Keine") }
@@ -70,6 +71,12 @@ fun InputScreen(navController: NavController) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // NFP-Datum
+            DatePickerField(context, "NFP-Datum", nfpdate) { selectedDate ->
+                nfpdate = selectedDate
+            }
+
+
             // Basaltemperatur
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(
@@ -154,6 +161,10 @@ fun InputScreen(navController: NavController) {
                     mucusTime = newTime
                 }
             }
+            // Geschlechtsverkehr
+            GvSelection(selectedOption = gvOption) { selected ->
+                gvOption = selected
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -163,6 +174,78 @@ fun InputScreen(navController: NavController) {
         }
     }
 }
+
+@Composable
+fun GvSelection(selectedOption: String, onOptionSelected: (String) -> Unit) {
+    val options = listOf(
+        "None" to "🚫",
+        "Protected" to "🛡️",
+        "Unprotected" to "❤️"
+    )
+
+    Column {
+        Text("Geschlechtsverkehr:", style = MaterialTheme.typography.bodyLarge)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            options.forEach { (label, emoji) ->
+                OutlinedButton(
+                    onClick = { onOptionSelected(label) },
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (selectedOption == label) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
+                    ),
+                    modifier = Modifier
+                        .wrapContentWidth()
+                        .padding(horizontal = 4.dp)
+                ) {
+                    Text(
+                        text = emoji,
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier
+                            .wrapContentWidth()
+                            .padding(4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+
+fun getCurrentDate(): String {
+    val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+    return dateFormat.format(Date())
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DatePickerField(
+    context: Context,
+    label: String,
+    date: String,
+    onDateSelected: (String) -> Unit
+) {
+    val calendar = Calendar.getInstance()
+
+    OutlinedButton(onClick = {
+        val datePickerDialog = android.app.DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val selectedDate = String.format("%02d.%02d.%d", dayOfMonth, month + 1, year)
+                onDateSelected(selectedDate)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+        datePickerDialog.show()
+    }) {
+        Text("$label: ${if (date.isNotEmpty()) date else "Datum wählen"}")
+    }
+}
+
 
 @Composable
 fun TemperaturePicker(

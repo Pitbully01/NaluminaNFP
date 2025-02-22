@@ -6,6 +6,9 @@ import androidx.navigation.NavHost
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import de.nalumina.naluminanfp.ui.screen.HomeScreen
+import de.nalumina.naluminanfp.ui.screen.InputScreen
+import de.nalumina.naluminanfp.ui.screen.SettingsScreen
 
 sealed class Screen(val route: String) {
     object Home : Screen("home")

@@ -1,4 +1,4 @@
-package de.nalumina.naluminanfp
+package de.nalumina.naluminanfp.ui.screen
 
 import android.content.Context
 import androidx.compose.foundation.layout.*
@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import de.nalumina.naluminanfp.ThemePreferences
 import kotlinx.coroutines.launch
 
 @Composable
